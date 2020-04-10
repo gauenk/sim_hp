@@ -1,0 +1,237 @@
+%First, the virtual events $V$ are sampled from a Poisson process with rate $\lambda(t)$. 
+%This allows us to directly apply the Poisson thinning theorem to resample censored/thinned events of the original Hawkes Process. 
+
+% Why not worry about including $X$ in the above algorithm?
+% This is because we only resample events that are thinned. We need to simulate ``real'' which inclues both, censored and not censored! Thus the probabiliy an observed event is not real is 0. Thus we don't worry about ``seeing'' $X$ in the simulation algorithm.
+
+
+% \vspace{1cm}
+% \begin{algorithm}[H]
+%   \DontPrintSemicolon
+%   \SetAlgoLined
+%   \KwIn{Hawkes Process Parameters $(\vtheta,\;\alpha)$, Virtual Event rate $\lambda$, Observed Data $X$, and Censored Events $Y$}
+%   \KwOut{Sampled censored events $\widetilde{Y}$}
+%   \algrule
+%   $V \sim \text{PoissonProcess}(\lambda)$\;
+%   $Z = \{ z_i \sim \text{Bernoulli}(1-\alpha) \}_{i=1}^{|V|}$ (or maybe some $\pi_Z$)\;
+%   $A = (V,Z)$\;
+%   \For{$(v_i,z_i) = a_i \in A$}{
+%     Compute  $p_1 = P(a_i \text{ is real } | A \setminus \{a_i\}, X, \vtheta, \alpha)$\;
+%     Compute  $p_2 = P(a_i \text{ is virtual } | A \setminus \{a_i\}, X,  \vtheta, \alpha)$\;
+%     Sample $u \sim \text{Uniform}(0,1)$\;
+%     \uIf{$u < \frac{p_1}{p_2}$}{
+%       Set $z_i = 0$
+%     }\uElse{
+%       Set $z_i = 1$
+%     }
+%   }
+%   \caption{Proposed algorithm for sampling censored data from a Hawkes Process}
+%   \label{alg:sim_censored}
+% \end{algorithm}
+%Bayesian Inference Algorithm for Censored HP Data
+
+% \noindent The procedure to sample censored data from a Hawkes Process is given in Algorithm~\ref{alg:sim_censored}. A key assumption in this algorithm is our rate $\lambda$ for the virtual events dominates the Hawkes Process rate at all time; namely $\lambda > \lambda^*(t)$.
+
+%\noindent Note we don't need to know the immigrant-child structure of the Hawkes Process. Instead we can thin the points using the rate function of the Hawkes Process, $\lambda*(t)$, and a dominating Poisson Process with $\lambda > \lambda^*(t)$. For any proposed point $v_i$ and time $t_i$ we know the rate up to that time, $\lambda(t_i)$. We can compute the probability of an event at that time using the history, and the probability of the future events considering the new resulting spike in the intensity function.
+
+%\noindent I am hoping there is some result that allows us to thin Poisson events and return a Hawkes Process. The reason I keep thinking of the Immigrant-Child process is because I know the result holds there. Maybe we can link the thinning using the rate function $\lambda*(t)$ to the Immigrant-Child structure.
+
+%\noindent Actually this is exactly what we will use. The total probability of an event being real is the probability it's a child of any past event (with the respective poisson process rate) and the probability of it being an immigrant (or a ``child'' with the special event at t = 0 as in Shelton). This is pretty straightforward to compute. Additionally, I don't think future events should impact this probability since the thinning probability (the corresponding Hawkes Process's Poisson Process rate for the Immigrant-Child model) only depends on the rate \emph{up to} the current time.
+
+\vspace{1cm}
+\noindent\textbf{Probability Event is Real}
+
+\noindent Let's compute the probability the event is real. We include a base event at $t = 0$ so all observed events are children and immigrants are direct descendants of this base event. Let $V' = V \setminus \{v_i\}$, $Z' = Z \setminus \{z_i\}$,
+
+\[
+  P(a_i \text{ is real } | A \setminus \{a_i\}, X, \vtheta, \alpha)
+\]
+\[
+  =
+  P(a_i \text{ is real} | A \setminus \{a_i\}, X)
+  =
+  P(a_i \text{ is real} | V', Z', X)
+  \propto
+  P(a_i \text{ is real}, V', Z', X)
+\]
+
+\[
+  =
+  P(a_i \text{ is a child of any past event}, V', Z', X)   
+\]
+
+\[
+  =
+  P((v_i,z_i=1) , V', Z', X)   
+\]
+
+\noindent In words, we want the probability the virtual event was censored, indicated by $z_i = 1$. Note $v \in V$ is the event time of an event sampled from the Poisson Process and $z \in Z$ is a binary number indicating if the event is virtual or real (censored). Let's define $V_i,Z_i$ to be all the events before $a_i$ and including $(v_i,1)$. E.g. $V_i = \{a_k\}_ {k=1}^{i-1} \cup \{a_i\}$ and $Z_i = \{z_k\}_{k=1}^{i-1} \cup \{1\}$. Now we break up the distribution into its components:
+
+\[
+  =
+  P(V')P(Z')P(a_i, X | V', Z')
+  =
+  P(V')P(Z')P(a_i, X | V_i, Z_i)
+\]
+
+\[
+  =
+  \text{PoissonProc}(V'; \lambda)
+  \;
+  \prod_{z \in Z'}\text{Bernoulli}(z; \alpha) 
+  \;
+  P(a_i, X | V_i, Z_i)  
+\]
+
+\[
+  P(a_i, X | V_i, Z_i)
+  =
+  \sum_{p(a_i) \in \mathcal{P}}
+  P(\text{not thinning } a_i \text{ with parent } p(a_i))
+  \text{HawkesProc}(a_i,p(a_i),X,Y; \vtheta)
+\]
+
+\noindent The $\mathcal{P}$ is the set of possible parents for $a_i$ and $p(a_i)$ is the parent event. The $\text{HawkesProc}(\cdots)$ is the probability of the trajectory with $a_i$ inserted with parent $p(a_i)$.
+
+
+This is easy to compute when $\mathcal{P}$ is small, but this could become expensive if the algorithm is run over an interval with many events. We can make this efficient by assigning a memory threshold; e.g. if the contribution to the current probability is less than say $10^{-6}$ then we ignore the remaining terms. This will something I will explore more during the project.
+
+\vspace{1cm}
+\noindent\textbf{Probability Event is Virtual}
+
+\noindent Next we write down the probability $a_i$ is a virtual event. This is very similar to our previous derivation, but now we change the final probability:
+
+\[
+  P(a_i \text{ is virtual } | A \setminus \{a_i\}, X, \vtheta, \alpha)
+\]
+\[
+  =
+  P(a_i \text{ is virtual } | A \setminus \{a_i\}, X)
+  =
+  P(a_i \text{ is virtual } | V', Z', X)
+  \propto
+  P(a_i \text{ is virtual }, V', Z', X)
+\]
+
+\[
+  =
+  P(V')P(Z')P(a_i, X | V', Z')
+\]
+
+\[
+  =
+  \text{PoissonProc}(V'; \lambda)
+  \;
+  \prod_{z \in Z'}\text{Bernoulli}(z; \alpha) 
+  \;
+  P(a_i, X | V_i, Z_i)  
+\]
+
+\[
+  P(a_i, X | V_i, Z_i)
+  =
+  \text{HawkesProc}(X,Y; \vtheta)
+  \sum_{p(a_i) \in \mathcal{P}}
+  P(\text{thinned } a_i \text{ with parent } p(a_i))
+\]
+
+
+\noindent Again, this summation depends on the number of the events over the interval. We will explore more options to make this efficient in the future.
+
+
+\begin{comment}
+\noindent With $Y = \{s_i : m_i = 0\}$, the censored points and $X = \{s_i : m_i = 1\}$, the observed points, $p(a_i)$ is defined to be the parent of $a_i$, and $\mathcal{P} = \{a\}_{j=1}^{i-1}$ the set of possible parents (e.g. any past event).
+
+\noindent Let's compute some probabilities:
+
+\[
+  P(m_i = 1 | X, A^{-1})
+  =
+  P(S = \{v_i\} \cup Y \cup X | X, A^{-i})
+  \propto
+  P(S = \{v_i\} \cup Y \cup X, A^{-i})
+\]
+
+\[
+  =
+  P(S = \{v_i\} \cup Y \cup X) P( A^{-i})
+\]
+\[
+  =
+  \text{HawkesProcessLikelihood}(S;\vtheta)
+  \;\;
+  \text{PoissonProcessLikelihood}(A^{-1};\lambda)
+\]
+
+\noindent And the probabilty the event remains virtual,
+
+\[
+  P(m_i = 0 | X, A^{-1})
+  =
+  P(S = Y \cup X | X, A^{-1})
+  \propto
+  P(S = Y \cup X, A^{-1})
+\]
+\[
+  =
+  P(S = Y \cup X) P( A^{-1} )  
+\]
+\[
+  =
+  \text{HawkesProcessLikelihood}(S;\vtheta)
+  \;\;
+  \text{PoissonProcessLikelihood}(A^{-1};\lambda)
+\]
+
+
+\newpage
+
+Let's talk about the probability a virtual event is real. From the generative process, we know real events have $z_i = 0$ and are in the Hawkes Process sample $S$. For a given sample of censored events $Y$ we want to know:
+
+\noindent 1. The probability of the Hawkes Process sample
+
+\[
+  P(S | \vtheta)
+  =
+  \exp\left(-\sum_l \int_0^T \lambda_l(s,h_s;\vtheta)ds \right)
+  \prod_{i=1}^{|S|}\lambda_{l_i}(t_i,h_i;\vtheta)
+\]
+
+
+\noindent 2. The probability of the sequence of censored events
+
+\[
+  P(Z | \alpha)
+  =
+  \prod_{i=1}^{|X|}\alpha \prod_{i=1}^{|Y|}(1 - \alpha)
+  =
+  \alpha^{|X|}(1 - \alpha)^{|Y|}
+\]
+
+\noindent So the overall probability of the generative model is given by:
+
+\[
+  P(S,Z | \vtheta, \alpha)
+  =
+  P(S | \vtheta) P(Z | \alpha)
+\]
+
+\noindent Now say we want to simulate the conditional distribution over $Y,Z_y$:
+
+\[
+  P(Y,Z_y | X, Z_x, \vtheta, \alpha)
+  =
+  \frac{
+    P(X, Y, Z_x, Z_y| \vtheta, \alpha)
+  }{
+    P(X, Z_x |\vtheta,\alpha)
+  }
+  =
+  \frac{
+    P(S | \vtheta) P(Z | \alpha)
+  }{
+    P(X | \vtheta) P(Z_x | \alpha)
+  }
+\]
+
+\end{comment}
