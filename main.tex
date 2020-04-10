@@ -13,73 +13,116 @@
 
 \maketitle
 
-\section*{Algorithms}
+\section{The Hawkes and Poisson Processes}
 
-\begin{algorithm}[H]
+\subsection{The Hawkes Processes}
+
+\noindent A Hawkes Process has a rate that depends on the history of the events. A common form of a Hawkes Process rate is the following:
+
+\[
+  \lambda^*(t)
+  =
+  \lambda(t|H)
+  =
+  \mu(t)
+  +
+  \sum_{(t',\kappa')\in H}\alpha(\kappa')\beta(t-t',\kappa')
+\]
+
+\noindent We call $\mu(t)$ the base rate and the $\alpha(\kappa')\beta(t-t',\kappa')$ term the offpsring intensity. These terms come from a different construction of the Hawkes process called the marked Poisson clustering process. Related work such as Shelton et al~\cite{AAAI1816985} uses the marked Poisson clustering process to do inference over the implicit tree structure of the Hawkes Process. This is useful in applications where the tree structure has a direct, useful interpretation; e.g. One can answer how crime in one geographic region will impact crime in other regions. For more on this one can reference~\cite{Rasmussen2013}. Running MCMC over the implicit tree structure of Hawkes process leads to complicated and localized MCMC updates, slowing the chain's mixing rate.
+
+\subsection{The Poisson Processes}
+
+\noindent A Poisson process samples discrete events in continuous time with a rate $\lambda(t)$. A Poisson process is called a homogenous Poisson process if $\lambda(t)$ is constant for all time $t$. Otherwise, a Poisson process is called a non-homogenous Poisson process. We note that conditioned on the history, a the Hawkes Process rate function is simply the rate function for a non-homogenous Poisson process.
+
+\section{Algorithm}
+
+We propose running MCMC via a Gibbs sampler directly over a set of virtual events $V$ and the Hawkes process trajectory $S$. We utilize the fact that for a fixed set of events $S$, the simulated Hawkes Process rate $\lambda^*(t)$ is a non-homogenous Poisson process. Thus, we can recover $S$ by thinning samples from a dominating Poisson process $\lambda(t)$, $\lambda(t) > \lambda^*(t)$ for all $t \in [0,T]$~\cite{pthin}. While the need for a dominating Poisson process rate implies clear theoretical restrictions to our algorithm, we demonstrate in Section~\ref{sec:tdb} this model can be applied to a variety of applications
+
+The proposed generative model for observed events from a censored Hawkes Process is provided in Algorithm~\ref{alg:censored_hp}. We simulate virtual events $V\sim \text{PoissonProcess}(\lambda(t))$ and apply thinning to recover $S$ and $U$, $S \cup U = V$, with $S$ the Hawkes trajectory and $U$ the thinned events. This thinning can be interpreted as a binary mask $Z \in \{0,1\}^{|V|}$ applied to events $v_i \in V$ with $z_i = 1$ indicating $v_i \in S$ and $z_i = 0$ indicating $v_i \in U$. Next, we separate $S$ into two disjoint sets: the observed events $X$ and censored events $Y$. The censoring occurs with probability $\text{Bern}(\nu)$. %Noteably, our algorithm requires us to have a rate $\lambda(t)$ which dominates the Hawkes process rate for any time $\lambda^*(t)$. %This censoring can be interpreted as a binary mask $C \in \{0,1\}^{|S|}$ applied to events in $s_i \in S$ with $c_i = 1$ indicating the event is observed, $s_i \in X$, and $c_i = 0$ indicating the event is censored, $s_i \in Y$.
+
+\begin{algorithm}[h]
   \DontPrintSemicolon
   \SetAlgoLined
-  \KwIn{Parameters $(\mu (t),)$}
-  \KwOut{The observed data $X$ and the censored data $Y$}
+  \KwIn{Hawkes process parameters $(\mu,\alpha,\beta,\gamma)$ and Censoring Parameter $\nu$}
+  \KwOut{$X$, observed events sample from a censored Hawkes Process}
   \algrule
-  TODO write the algorithm for clustering hawkes process\;
-  \caption{Generative Process of a Hawkes Process as a marked Poisson cluster process}
-  \label{alg:gen_hp}
-\end{algorithm}
-
-\noindent The generative process for a trajectory sampled from a Hawkes Process is given by Algorithm~\ref{alg:gen_hp}. This construction is taken from ref~\cite{Rasmussen2013}. The immigrants $I$ follow a Poisson process with intensity $\mu(t)$. Each immigrant $t_i \in I$ has an associated mark with density function $\gamma(\kappa_i | t_i)$. Each immigrant generates a cluster $C_i$, and these clusters are independent. To simulate a cluster $C_i$ we sample points of generations in order $n = 0, 1, \ldots$ with the following branching structure: Generation $0$ consists simply of the immigrant and its mark $(t_i,\kappa_i)$. Recursively, given the $0,\ldots,n$ generations in $C_i$, each point of the generation $n$ simulates points for generation $n+1$. The new points are sampled from a Poisson process with a rate of $\alpha(\kappa_i)\beta(t - t_i,\kappa_j)$ and the mark $\kappa_k$ is sampled with density $\gamma(\kappa_k | t_k, (t_j,\kappa_j))$. The Hawkes sample is the union of all the events. 
-
-
-\vspace{1cm}
-\begin{algorithm}[H]
-  \DontPrintSemicolon
-  \SetAlgoLined
-  \KwIn{Parameters $(\vtheta,\;\alpha)$}
-  \KwOut{The observed data $X$ and the censored data $Y$}
-  \algrule
-  $S \sim \text{HawkesProcess}(\vtheta)$\;
-  $z_i | s_i \overset{iid}{\sim} \text{Bernoulli}(\alpha)$\;
-  $Z = \{z_i\}_{i=1}^{|S|}$, the include/exclude mask\;
-  $Y = \{s_i : z_i = 0\}$, the censored points\;
-  $X = \{s_i : z_i = 1\}$, the observed points\;
-  \caption{Generative Process for a Censored Hawkes Process}
-  \label{alg:gen_censored_hp}
-\end{algorithm}
-
-
-\noindent The generative process for a Censored Hawkes Process is given in Algorithm~\ref{alg:gen_censored_hp}. The original trajectory, $S$, is simulated from a Hawkes Process with parameters $\vtheta$. Eah sample is marked with a binary value $z_i \in \{0,1\}$ indicating if the resulting event is observed or missing. Here, we assume all events are observed with probability $\alpha$. Using the binary values, we separate the trajectory into the observed set $X$ and the censored set $Y$.
-
-\vspace{1cm}
-\begin{algorithm}[H]
-  \DontPrintSemicolon
-  \SetAlgoLined
-  \KwIn{Hawkes Process Parameters $(\vtheta,\;\alpha)$, Virtual Event rate $\lambda$, Observed Data $X$, and Censored Events $Y$}
-  \KwOut{Sampled censored events $\widetilde{Y}$}
-  \algrule
-  $V \sim \text{PoissonProcess}(\lambda)$\;
-  $Z = \{ z_i \sim \text{Bernoulli}(1-\alpha) \}_{i=1}^{|V|}$ (or maybe some $\pi_Z$)\;
-  $A = (V,Z)$\;
-  \For{$(v_i,z_i) = a_i \in A$}{
-    Compute  $p_1 = P(a_i \text{ is real } | A \setminus \{a_i\}, X, \vtheta, \alpha)$\;
-    Compute  $p_2 = P(a_i \text{ is virtual } | A \setminus \{a_i\}, X,  \vtheta, \alpha)$\;
-    Sample $u \sim \text{Uniform}(0,1)$\;
-    \uIf{$u < \frac{p_1}{p_2}$}{
-      Set $z_i = 0$
-    }\uElse{
-      Set $z_i = 1$
+  $S = \emptyset$\;
+  $V \sim \text{PoissonProcess}(\lambda(t))$\;
+  \For{$v_i \in V$}{ % simulates the parents
+    \If{w.p. $\frac{\lambda^*(v_i)}{\lambda(v_i)}$}{
+      $\kappa_i \sim \gamma(\kappa_i | v_i)$\; % simulate the mark
+      $S = S \cup (v_i,\kappa_i)$\;
     }
   }
-  \caption{Proposed algorithm for sampling censored data from a Hawkes Process}
-  \label{alg:sim_censored}
+  $z_i | s_i \sim \text{Bern}(\nu)$, $Z = \{z_i\}_{i=1}^{|V|}$\;
+  $X = \{v_i : z_i = 1, z_i \in Z\}$, $Y = \{v_i : z_i = 0, z_i \in Z\}$\;
+  \algrule
+  \caption{Generative model for a censored Hawkes Process}
+  \label{alg:censored_hp}
 \end{algorithm}
-%Bayesian Inference Algorithm for Censored HP Data
 
-\noindent The procedure to sample censored data from a Hawkes Process is given in Algorithm~\ref{alg:sim_censored}. A key assumption in this algorithm is our rate $\lambda$ for the virtual events dominates the Hawkes Process rate at all time; namely $\lambda > \lambda^*(t)$.
 
-%\noindent Note we don't need to know the immigrant-child structure of the Hawkes Process. Instead we can thin the points using the rate function of the Hawkes Process, $\lambda*(t)$, and a dominating Poisson Process with $\lambda > \lambda^*(t)$. For any proposed point $v_i$ and time $t_i$ we know the rate up to that time, $\lambda(t_i)$. We can compute the probability of an event at that time using the history, and the probability of the future events considering the new resulting spike in the intensity function.
+Our Gibbs sampler targets the state $(S,V)$ or equivalently $(X,Y,U,Z)$. The Gibbs sampler alternates between simulating $U|X,Y \sim \text{PoissonProcess}(\lambda(t) - \lambda^*(t))$ and simulating censored events from virtual events $Z|X,Y,U$ with either Forward-Filtering Backward-Sampling (FFBS) or Metroplis-within-Gibbs algorithms. 
 
-%\noindent I am hoping there is some result that allows us to thin Poisson events and return a Hawkes Process. The reason I keep thinking of the Immigrant-Child process is because I know the result holds there. Maybe we can link the thinning using the rate function $\lambda*(t)$ to the Immigrant-Child structure.
 
-%\noindent Actually this is exactly what we will use. The total probability of an event being real is the probability it's a child of any past event (with the respective poisson process rate) and the probability of it being an immigrant (or a ``child'' with the special event at t = 0 as in Shelton). This is pretty straightforward to compute. Additionally, I don't think future events should impact this probability since the thinning probability (the corresponding Hawkes Process's Poisson Process rate for the Immigrant-Child model) only depends on the rate \emph{up to} the current time.
+The FFBS algorithm allows our proposals to mode hop, giving our MCMC algorithm improved mixing speed. However, this comes with additonal computational complexity. The FFBS algorithm requires $O(N^2T)$ computation complexity for $N$ states. For a Hawkes Process, this set of states for $Z$ grows exponentially with $T$ to $N \approx 2^T$. This computational burdon can be mitigated by only allowing a window of memory, say $\tau$, the contribute to the current state space. Thus $N \leq O(2^\tau)$ for the entire simulation maintaining a computational complexity of $O(N^{2\tau} T)$. While this window does not make FFBS algorithm exact, a properly set $\tau$ provides analogous to computer precision error (to Rao: should we invest in a strong claim like this, or maybe somethig weaker? I guess this could be an alternative to exact but then our algorithm is approximate but idk if this matters.), say $10^{-9}$.
+
+
+The naive alternative to FFBS is a Metropolis-within-Gibbs method of sequentially selecting censored events from $Z|X,Y,U$ and reconditioning the future samples from these selections, $z_{i+1} | X,Y,U,\{z_k\}_{k=1}^i$. However, this leads slow mixing and an additional set of acceptance probabilities. Additionall this naive method still requires $O(T)$ computation complexity. We experimentally demonstrate the advantage of FFBS in Section~\ref{sec:tbd}.
+
+
+\begin{algorithm}[h]
+  \DontPrintSemicolon
+  \SetAlgoLined
+  \KwIn{Observed Hawkes events $X$, censored Hawkes events $Y$, thinned events $U$, and the thinning mask $Z$.}
+  \KwOut{Newly sampled censored Hawkes events $Y$, thinned events $U$, and thinning mask $Z$}
+  \algrule
+  Simulate $U|X,Y \sim \text{PoissonProcess}(\lambda(t) - \lambda^*(t))$\;
+  Simulate $Z|X,Y,U$ using FFBS\;
+  \algrule
+  \caption{Gibbs Sampling Algorithm for Hawkes Process}
+  \label{alg:gibbs_hp}
+\end{algorithm}
+
+\begin{algorithm}[h]
+  \DontPrintSemicolon
+  \SetAlgoLined
+  \KwIn{Observed Hawkes events $X$, censored Hawkes events $Y$, thinned events $U$}
+  \KwOut{Newly sampled censored Hawkes events $\widetilde{Y}$ and thinned events $\widetilde{U}$}
+  \algrule
+  $L = Y \cup U$\;
+  \For{$l_i \in L$}{
+    $Y = Y \setminus \{l_i\}$, $U = U \setminus \{l_i\}$\;
+    \uIf{w.p. $p(l_i|X,Y,U)/p(l_i|\lambda)$}{
+      $Y = Y \cup \{l_i\}$\;
+    }\uElse{
+      $U = U \cup \{l_i\}$\;
+    }
+  }
+  \algrule
+  \caption{Thinning procedure for resampling censored Hawkes events}
+  \label{alg:gen_hp_thin}
+\end{algorithm}
+
+
+\subsection{Resample thinned events conditions on Data}
+
+To resample the thinned events of the Hawkes process conditioned on the data, we proposed using the FFBS algorithm. This improves our MCMC algorithms mixing rate with little additional computational complexity.
+
+\begin{comment}
+
+\vspace{1cm}
+\noindent\textbf{Probability Event is Thinned}
+
+
+\[
+  P(l_i | X, Y ,U) 
+  =
+  P(l_i | V)/ P(l_i | \lambda)
+  =
+  \text{PoissonProcess}(l_i)
+\]
 
 \vspace{1cm}
 \noindent\textbf{Probability Event is Real}
@@ -180,102 +223,6 @@ This is easy to compute when $\mathcal{P}$ is small, but this could become expen
 
 
 \noindent Again, this summation depends on the number of the events over the interval. We will explore more options to make this efficient in the future.
-
-
-\begin{comment}
-\noindent With $Y = \{s_i : m_i = 0\}$, the censored points and $X = \{s_i : m_i = 1\}$, the observed points, $p(a_i)$ is defined to be the parent of $a_i$, and $\mathcal{P} = \{a\}_{j=1}^{i-1}$ the set of possible parents (e.g. any past event).
-
-\noindent Let's compute some probabilities:
-
-\[
-  P(m_i = 1 | X, A^{-1})
-  =
-  P(S = \{v_i\} \cup Y \cup X | X, A^{-i})
-  \propto
-  P(S = \{v_i\} \cup Y \cup X, A^{-i})
-\]
-
-\[
-  =
-  P(S = \{v_i\} \cup Y \cup X) P( A^{-i})
-\]
-\[
-  =
-  \text{HawkesProcessLikelihood}(S;\vtheta)
-  \;\;
-  \text{PoissonProcessLikelihood}(A^{-1};\lambda)
-\]
-
-\noindent And the probabilty the event remains virtual,
-
-\[
-  P(m_i = 0 | X, A^{-1})
-  =
-  P(S = Y \cup X | X, A^{-1})
-  \propto
-  P(S = Y \cup X, A^{-1})
-\]
-\[
-  =
-  P(S = Y \cup X) P( A^{-1} )  
-\]
-\[
-  =
-  \text{HawkesProcessLikelihood}(S;\vtheta)
-  \;\;
-  \text{PoissonProcessLikelihood}(A^{-1};\lambda)
-\]
-
-
-\newpage
-
-Let's talk about the probability a virtual event is real. From the generative process, we know real events have $z_i = 0$ and are in the Hawkes Process sample $S$. For a given sample of censored events $Y$ we want to know:
-
-\noindent 1. The probability of the Hawkes Process sample
-
-\[
-  P(S | \vtheta)
-  =
-  \exp\left(-\sum_l \int_0^T \lambda_l(s,h_s;\vtheta)ds \right)
-  \prod_{i=1}^{|S|}\lambda_{l_i}(t_i,h_i;\vtheta)
-\]
-
-
-\noindent 2. The probability of the sequence of censored events
-
-\[
-  P(Z | \alpha)
-  =
-  \prod_{i=1}^{|X|}\alpha \prod_{i=1}^{|Y|}(1 - \alpha)
-  =
-  \alpha^{|X|}(1 - \alpha)^{|Y|}
-\]
-
-\noindent So the overall probability of the generative model is given by:
-
-\[
-  P(S,Z | \vtheta, \alpha)
-  =
-  P(S | \vtheta) P(Z | \alpha)
-\]
-
-\noindent Now say we want to simulate the conditional distribution over $Y,Z_y$:
-
-\[
-  P(Y,Z_y | X, Z_x, \vtheta, \alpha)
-  =
-  \frac{
-    P(X, Y, Z_x, Z_y| \vtheta, \alpha)
-  }{
-    P(X, Z_x |\vtheta,\alpha)
-  }
-  =
-  \frac{
-    P(S | \vtheta) P(Z | \alpha)
-  }{
-    P(X | \vtheta) P(Z_x | \alpha)
-  }
-\]
 
 \end{comment}
 
