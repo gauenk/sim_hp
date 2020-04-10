@@ -45,8 +45,16 @@
   \label{alg:gen_censored_hp}
 \end{algorithm}
 
-
-\noindent The generative process for a Censored Hawkes Process is given in Algorithm~\ref{alg:gen_censored_hp}. The original trajectory, $S$, is simulated from a Hawkes Process with parameters $\vtheta$. Eah sample is marked with a binary value $z_i \in \{0,1\}$ indicating if the resulting event is observed or missing. Here, we assume all events are observed with probability $\alpha$. Using the binary values, we separate the trajectory into the observed set $X$ and the censored set $Y$.
+% include mechanism for virtual events (2)
+% Y,V | X
+% via Gibbs sampler
+% simulate V | X, Y, Z
+% [not really] simulate Z | X, Y, V NO
+% simulate V' cup Y' | X, Y, V
+% define z to also be to {x,y,v} not 0,1
+% simulate Y | X, V, Z
+% Y, Z, V | X
+\noindent The generative model for a Censored Hawkes Process is given in Algorithm~\ref{alg:gen_censored_hp}. The original trajectory, $S$, is simulated from a Hawkes Process with parameters $\vtheta$. Eah sample is marked with a binary value $z_i \in \{0,1\}$ indicating if the resulting event is observed or censored (missing). Here, we assume all events are observed with probability $\alpha$. Using the binary values, we separate the trajectory into the observed set $X$ and the censored set $Y$.
 
 \vspace{1cm}
 \begin{algorithm}[H]
@@ -60,7 +68,7 @@
   $A = (V,Z)$\;
   \For{$(v_i,z_i) = a_i \in A$}{
     Compute  $p_1 = P(a_i \text{ is real } | A \setminus \{a_i\}, X, \vtheta, \alpha)$\;
-    Compute  $p_2 = P(a_i \text{ is virtual } | A \setminus \{a_i\}, X,  \vtheta, \alpha)$\;
+    Compute  $p_2 = P(a_i \text{ is virtual } | A \setminus \{a_i\}, X, \vtheta, \alpha)$\;
     Sample $u \sim \text{Uniform}(0,1)$\;
     \uIf{$u < \frac{p_1}{p_2}$}{
       Set $z_i = 0$
@@ -68,7 +76,8 @@
       Set $z_i = 1$
     }
   }
-  \caption{Proposed algorithm for sampling censored data from a Hawkes Process}
+  $\widetilde{Y} = \{v_i : z_i = 1, z_i \in Z\}$
+  \caption{Proposed 1-step algorithm for sampling censored data from a Hawkes Process}
   \label{alg:sim_censored}
 \end{algorithm}
 %Bayesian Inference Algorithm for Censored HP Data
@@ -84,10 +93,10 @@
 \vspace{1cm}
 \noindent\textbf{Probability Event is Real}
 
-\noindent Let's compute the probability the event is real. We include a base event at $t = 0$ so all observed events are children and immigrants are direct descendants of this base event. Let $V' = V \setminus \{v_i\}$, $Z' = Z \setminus \{z_i\}$,
+\noindent Let's compute the probability the event is real. We include a base event at $t = 0$ so all observed events are children and immigrants are direct descendants of this base event. We will suppress the dependence on the parameters $(\vtheta,\alpha,\lambda)$ in our writing. Let $V' = V \setminus \{v_i\}$, $Z' = Z \setminus \{z_i\}$,
 
 \[
-  P(a_i \text{ is real } | A \setminus \{a_i\}, X, \vtheta, \alpha)
+  P(a_i \text{ is real } | A \setminus \{a_i\}, X, \vtheta, \alpha, \lambda)
 \]
 \[
   =
@@ -134,7 +143,7 @@
   \text{HawkesProc}(a_i,p(a_i),X,Y; \vtheta)
 \]
 
-\noindent The $\mathcal{P}$ is the set of possible parents for $a_i$ and $p(a_i)$ is the parent event. The $\text{HawkesProc}(\cdots)$ is the probability of the trajectory with $a_i$ inserted with parent $p(a_i)$.
+\noindent Recall $a_i = (v_i,z_i)$ and if $a_i$ is a real, censored event then $a_i = (v_i, 1)$. The $\mathcal{P}$ is the set of possible parents for $a_i$ and $p(a_i)$ is the parent event. The $\text{HawkesProc}(\cdots)$ is the probability of the trajectory an event at time $v_i$ inserted with parent $p(a_i)$.
 
 
 This is easy to compute when $\mathcal{P}$ is small, but this could become expensive if the algorithm is run over an interval with many events. We can make this efficient by assigning a memory threshold; e.g. if the contribution to the current probability is less than say $10^{-6}$ then we ignore the remaining terms. This will something I will explore more during the project.
@@ -145,7 +154,7 @@ This is easy to compute when $\mathcal{P}$ is small, but this could become expen
 \noindent Next we write down the probability $a_i$ is a virtual event. This is very similar to our previous derivation, but now we change the final probability:
 
 \[
-  P(a_i \text{ is virtual } | A \setminus \{a_i\}, X, \vtheta, \alpha)
+  P(a_i \text{ is virtual } | A \setminus \{a_i\}, X, \vtheta, \alpha, \lambda)
 \]
 \[
   =
@@ -206,7 +215,7 @@ This is easy to compute when $\mathcal{P}$ is small, but this could become expen
   \text{PoissonProcessLikelihood}(A^{-1};\lambda)
 \]
 
-\noindent And the probabilty the event remains virtual,
+\noindent And the probability the event remains virtual,
 
 \[
   P(m_i = 0 | X, A^{-1})
