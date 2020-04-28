@@ -18,7 +18,7 @@
 
 \subsection{The Hawkes Processes}
 
-\noindent A Hawkes Process has a rate that depends on the history of the events. A common form of a Hawkes Process rate is the following:
+\noindent A Hawkes Process is a point process with a rate function that depends on the history of the events. A common form of a Hawkes Process rate is the following:
 
 \[
   \lambda^*(t)
@@ -30,17 +30,48 @@
   \sum_{(t',\kappa')\in H}\alpha(\kappa')\beta(t-t',\kappa')
 \]
 
-\noindent We call $\mu(t)$ the base rate and the $\alpha(\kappa')\beta(t-t',\kappa')$ term the offspring intensity. These terms come from a different construction of the Hawkes process called the marked Poisson clustering process. Related work such as Shelton et al~\cite{AAAI1816985} uses the marked Poisson clustering process to do inference over the implicit tree structure of the Hawkes Process. This is useful in applications where the tree structure has a direct, useful interpretation; e.g. One can answer how crime in one geographic region will impact crime in other regions. For more on this one can reference~\cite{Rasmussen2013}. Running MCMC over the implicit tree structure of Hawkes process leads to complicated and localized MCMC updates, slowing the chain's mixing rate.
+\noindent We call $\mu(t)$ the base rate and the $\alpha(\kappa')\beta(t-t',\kappa')$ term the offspring intensity. These terms come from the marked Poisson clustering process construction of the Hawkes process. In short, this construction builds a Hawkes process by sampling events directly from an latent family-tree. Related work such as Shelton et al~\cite{AAAI1816985} uses the marked Poisson clustering process for inference directly over the implicit tree structure of the Hawkes Process. In some applications the tree structure has a useful interpretation; e.g. One can answer how crime in one geographic region will impact crime in other regions. For more on this one can read~\cite{Rasmussen2013}. Running MCMC over the implicit tree structure of a Hawkes process leads to complicated and localized MCMC updates, resulting in slow mixing rate of the chain.
 
 \subsection{The Poisson Processes}
 
-\noindent A Poisson process samples discrete events in continuous time with a rate $\lambda(t)$. A Poisson process is called a homogeneous Poisson process if $\lambda(t)$ is constant for all time $t$. Otherwise, a Poisson process is called a non-homogeneous Poisson process. We note that conditioned on the history, a the Hawkes Process rate function is simply the rate function of a non-homogeneous Poisson process.
+\noindent A Poisson process samples discrete events in continuous time with a rate $\eta(t)$. A Poisson process is called a homogeneous Poisson process if $\eta(t)$ is constant for all time $t$. Otherwise, a Poisson process is called a non-homogeneous Poisson process. We note that conditioned on the events, a Hawkes Process rate function is simply the rate function of a non-homogeneous Poisson process. That is we have $\lambda^*(t) = \lambda(t | S)$ is only a function of time.
 
 \section{Algorithm}
 
-We propose running MCMC via a Gibbs sampler over the generative process outlined in Algorithm~\ref{alg:censored_hp}. We utilize the fact that for a fixed set of events $S$, the simulated Hawkes Process rate $\lambda^*(t)$ is a non-homogeneous Poisson process. Thus, we can recover $S$ by thinning samples from a dominating Poisson process with rate function $\lambda(t)$, $\lambda(t) > \lambda^*(t)$ for all $t \in [0,T]$~\cite{pthin}. While the need for a dominating rate function implies clear theoretical restrictions to our algorithm, we demonstrate in Section~\ref{sec:tdb} the practical impact.
+We propose running MCMC via a Gibbs sampler over the generative process outlined in Algorithm~\ref{alg:censored_hp}. We utilize the fact that for a fixed set of events $S$, the simulated Hawkes Process rate $\lambda^*(t)$ yields a non-homogeneous Poisson process. Thus, we can recover event times in $S$ via thinning from a dominating Poisson process with rate function $\eta(t)$, $\eta(t) > \lambda^*(t)$ for all $t \in [0,T]$~\cite{pthin}. While the need for a dominating rate function implies clear theoretical restrictions to our algorithm, we demonstrate in Section~\ref{sec:tdb} the clear practical utility despite this restriction.
 
-The proposed generative model for observed events from a censored Hawkes Process is provided in Algorithm~\ref{alg:censored_hp}. We simulate virtual events $V\sim \text{PoissonProcess}(\lambda(t))$ and apply the Poisson Thinning Theorem to recover $S$ and $U$, $S \cup U = V$, with $S$ the Hawkes trajectory and $U$ the thinned events. This thinning can be interpreted as a binary mask $Z \in \{0,1\}^{|V|}$ applied to events $v_i \in V$ with $z_i = 1$ indicating $v_i \in S$ and $z_i = 0$ indicating $v_i \in U$. Finally to model the censored events, we separate $S$ into two disjoint sets: the observed events $X$ and censored events $Y$. The censoring occurs with probability $\text{Bern}(\nu)$. %Noteably, our algorithm requires us to have a rate $\lambda(t)$ which dominates the Hawkes process rate for any time $\lambda^*(t)$. %This censoring can be interpreted as a binary mask $C \in \{0,1\}^{|S|}$ applied to events in $s_i \in S$ with $c_i = 1$ indicating the event is observed, $s_i \in X$, and $c_i = 0$ indicating the event is censored, $s_i \in Y$.
+The proposed generative model for observed events from a censored Hawkes Process is provided in Algorithm~\ref{alg:censored_hp}. We simulate virtual events $V\sim \text{PoissonProcess}(\lambda(t))$. Next, we apply the Poisson Thinning Theorem to recover $S$ and $U$, $S \cup U = V$, with $S$ the Hawkes trajectory and $U$ the thinned events. This thinning can be interpreted as a binary mask $L \in \{0,1\}^{|V|}$ applied to events $v_i \in V$ with $l_i = 1$ indicating $v_i \in S$ and $l_i = 0$ indicating $v_i \in U$. Finally to model the censored events, we separate $S$ into two disjoint sets: the observed events $X$ and censored events $Y$, $S = X \cup Y$. The censoring occurs with probability $\text{Bern}(\nu)$. Once again, we can see step as first simulating a binary mask $Z \in \{0,1\}^{|S|}$ and then splitting $S$ into the disjoint sets $X$ and $Y$ accordingly. The probabiliy of our generative model is given with $S_k = \{v_k \in V|\; k < i, l_k = 1\}$ we have
+
+
+and equivalently we have with $S_k = \{v_k \in V |\; k < i, v_k \in S\}$
+
+
+
+\[
+P(V,L,Z)
+=
+\text{PoissonProc}(V\;;\eta(t))\;
+\prod_{i=1}^{|L|} \text{Bern}\left(l_i\;;\frac{\lambda(v_i | S_k)}{\eta(v_k)}\right)
+\prod_{i=1}^{|Z|} \text{Bern}(z_i\;;\nu)
+\]
+
+\noindent or written explicitly with data
+
+\[
+P(U,Y,X)
+=
+\text{PoissonProc}(X \cup Y\;;\lambda(t|S_k))\;
+\text{PoissonProc}(U\;;\eta(t) - \lambda(t|S_k))\;
+\]
+
+\[
+  \prod_{i=1}^{|U| + |S|} \text{Bern}\left(\mathbf{1}_{w_i \in S}\;;\frac{\lambda(v_i | S_k)}{\eta(v_k)}\right)  
+  \prod_{i=1}^{|S|} \text{Bern}(\mathbf{1}_{s_i \in X}\;;\nu)
+\]
+
+Thus the metropolis-within-gibbs algorithm is as follows
+
+%Noteably, our algorithm requires us to have a rate $\lambda(t)$ which dominates the Hawkes process rate for any time $\lambda^*(t)$. %This censoring can be interpreted as a binary mask $C \in \{0,1\}^{|S|}$ applied to events in $s_i \in S$ with $c_i = 1$ indicating the event is observed, $s_i \in X$, and $c_i = 0$ indicating the event is censored, $s_i \in Y$.
 
 \begin{algorithm}[h]
   \DontPrintSemicolon
@@ -50,7 +81,11 @@ The proposed generative model for observed events from a censored Hawkes Process
   \algrule
   $S = \emptyset$, the Hawkes events\;
   $V \sim \text{PoissonProcess}(\eta(t))$\;
-  $l_i | \{v_{k}\}_{k=1}^i \sim \text{Bern}(\frac{\lambda(v_i | S)}{\eta(v_i)})$\;
+  $l_i | \{v_{k}\}_{k=1}^i \sim \text{Bern}(\frac{\lambda(v_i | S_i)}{\eta(v_i)})$,
+  $S_i = \{v_j \in V|\; j < i, l_j = 1\}$\;
+  $L = \{l_i\}_{i=1}^{|V|}$, the thinning mask\;
+  $S = \{v_i : l_i = 1, l_i \in L, v_i \in V\}$\;
+  $U = \{v_i : l_i = 0, l_i \in L, v_i \in V\}$\;
   %\For{$v_i \in V$}{ % simulates the parents
   %  \uIf{w.p. $\frac{\lambda(v_i | S)}{\eta(v_i)}$}{
    %   $m_i \sim p_m(m_i | v_i)$\; % simulate the mark
@@ -59,29 +94,18 @@ The proposed generative model for observed events from a censored Hawkes Process
     %    $U = U \cup \{v_i\}$
     %}
   %}
-  $z_i | s_i \sim \text{Bern}(\nu)$, $Z = \{z_i\}_{i=1}^{|V|}$, the censoring\;
-  $X = \{s_i : z_i = 1, z_i \in Z\}$, $Y = \{s_i : z_i = 0, z_i \in Z\}$\;
+  $z_i | s_i \sim \text{Bern}(\nu)$\;
+  $Z = \{z_i\}_{i=1}^{|S|}$, the censoring mask\;
+  $X = \{s_i : z_i = 1, z_i \in Z\}$\;
+  $Y = \{s_i : z_i = 0, z_i \in Z\}$\;
   \algrule
   \caption{Generative model for a censored Hawkes Process}
   \label{alg:censored_hp}
 \end{algorithm}
 
 
-Our Gibbs sampler targets the state $(Z,S,V)$ or equivalently $(Z,Y,X,U)$. The Gibbs sampler alternates between simulating $U|X,Y \sim \text{PoissonProcess}(\eta(t) - \lambda^*(t))$ and simulating censored events from virtual events $L|X,Y,U$ with either Forward-Filtering Backward-Sampling (FFBS) or Metroplis-within-Gibbs algorithms. 
+Our Gibbs sampler targets the state $(V,L,Z)$ or $(U,S,L,Z)$. We note that $U$ and $S$ contain all the information for $L$, but we write our state including $L$ for clarity of writing. The Gibbs sampler alternates between (i) simulating thinned events $U|S \sim \text{PoissonProcess}(\eta(t) - \lambda(t | S_t))$ where $S_t$ are all events in $S$ before time $t$, and (ii) simulating censored events $L|U,S,Z$ with either a Metroplis-within-Gibbs algorithm or Forward-Filtering Backward-Sampling (FFBS).
 
-
-The FFBS algorithm allows our proposals to mode hop, giving our MCMC algorithm improved mixing speed. However, this comes with additional computational complexity. The FFBS algorithm requires $O(N^2T)$ computational complexity for $N$ states. In our model, this set of states for $Z$ grows exponentially with $T$, $N \approx 2^T$. This computational burden can be mitigated by only allowing a window of memory, say $\tau$, the contribute to the current state space. Thus $N \leq O(2^\tau)$ for the entire simulation maintaining a computational complexity of $O(4^{\tau} T)$. While this window does not keep the FFBS algorithm exact, a properly set $\tau$ provides analogous to computer precision error (to Rao: should we invest in a strong claim like this, or maybe something weaker? I guess this could be an alternative to exact but then our algorithm is approximate but idk if this matters.), say $10^{-9}$.
-
-
-The naive alternative to FFBS is a Metropolis-within-Gibbs method of sequentially selecting censored events from $Z|X,Y,U$ and reconditioning the future samples from these selections, $z'_{i+1} | X,Y,U,\{z'_k\}_{k=1}^i, \{z_k\}_{k=i+2}^{|X|+|Y|}$. However, this leads slow mixing and an additional set of acceptance probabilities. Additionally, this naive method still requires $O(T)$ computation complexity. We experimentally demonstrate the advantage of FFBS in Section~\ref{sec:tbd}.
-
-%\[
-%P(Z,S,U)
-%=
-%\prod_{i=1}^{|S|} \text{Bern}(z_i;\nu)
-%\prod_{i=1}^{|S|} \frac{\lambda(t | \{s_i\})}{\lambda(t)}
-%\prod \text{PoissonProc}(X,Y,U;\lambda)
-%\]
 
 
 \begin{algorithm}[h]
@@ -91,16 +115,40 @@ The naive alternative to FFBS is a Metropolis-within-Gibbs method of sequentiall
   \KwOut{Newly sampled censored Hawkes events $Y$, thinned events $U$, and thinning mask $Z$}
   \algrule
   Simulate $U|X,Y \sim \text{PoissonProcess}(\eta(t) - \lambda(t | X, Y))$, {\bf this includes future events which is not defined}\;
-  Simulate $Z|X,Y,U$\;
+  Simulate $Z|X,Y,U$ via metropolis-within-gibbs\;
   \algrule
   \caption{Gibbs Sampling steps for Hawkes Process}
   \label{alg:gibbs_hp}
 \end{algorithm}
 
+\begin{algorithm}[h]
+  \DontPrintSemicolon
+  \SetAlgoLined
+  \KwIn{$V$ virtual events ,$L$ thinning mask, $Z$ missing events}
+  \KwOut{New Values for $L$ and $Z$}
+  \algrule
+  Augmented state space $Z \in \{-1,0,1\}^N$\;
+  \For{$w \in W$}{
+  }
+  \algrule
+  \caption{Metropolis Within Gibbs}
+  \label{alg:gibbs_hp}
+\end{algorithm}
+
+
+\subsection{Resampling Censored Events: Metropolis-Within-Gibbs}
+
 
 \subsection{Resample thinned events conditions on Data}
 
 To resample the thinned events of the Hawkes process conditioned on the data, we proposed using the FFBS algorithm. This improves our MCMC algorithms mixing rate with little additional computational complexity.
+
+
+
+The FFBS algorithm allows our proposals to mode hop, giving our MCMC algorithm improved mixing speed. However, this comes with additional computational complexity. The FFBS algorithm requires $O(N^2T)$ computational complexity for $N$ states. In our model, this set of states for $Z$ grows exponentially with $T$, $N \approx 2^T$. This computational burden can be mitigated by only allowing a window of memory, say $\tau$, the contribute to the current state space. Thus $N \leq O(2^\tau)$ for the entire simulation maintaining a computational complexity of $O(4^{\tau} T)$. While this window does not keep the FFBS algorithm exact, a properly set $\tau$ provides analogous to computer precision error (to Rao: should we invest in a strong claim like this, or maybe something weaker? I guess this could be an alternative to exact but then our algorithm is approximate but idk if this matters.), say $10^{-9}$.
+
+
+The naive alternative to FFBS is a Metropolis-within-Gibbs method of sequentially selecting censored events from $Z|X,Y,U$ and reconditioning the future samples from these selections, $z'_{i+1} | X,Y,U,\{z'_k\}_{k=1}^i, \{z_k\}_{k=i+2}^{|X|+|Y|}$. However, this leads slow mixing and an additional set of acceptance probabilities. Additionally, this naive method still requires $O(T)$ computation complexity. We experimentally demonstrate the advantage of FFBS in Section~\ref{sec:tbd}.
 
 
 % (ii) set ancenstry | X, Y? is it easy to sample? hawkes kernel with bounded support. truncated hawkes process (in practice) then its linear.
