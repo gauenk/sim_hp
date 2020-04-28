@@ -128,13 +128,30 @@ Our Gibbs sampler targets the state $(V,L,Z)$ or $(U,S,L,Z)$. We note that $U$ a
   \KwOut{New Values for $L$ and $Z$}
   \algrule
   Augmented state space $Z \in \{-1,0,1\}^N$\;
-  \For{$w \in W$}{
+  \For{$z_i \in Z$}{
+    \If{$z = 0$ we move event from $Y$ to $U$}{
+      with prob $\alpha_{y2u}$ $l_i 1 \to 0$ and $z_i 0 \to 1$.
+    }\Elif{$z = -1$ we move event from $U$ to $Y$}{
+      with prob $\alpha_{u2y}$ $l_i 1 \to 0$ and $z_i 0 \to 1$.
+    }
   }
   \algrule
   \caption{Metropolis Within Gibbs}
   \label{alg:gibbs_hp}
 \end{algorithm}
 
+\[
+  \alpha_{y2u}^i
+  =
+  P(V,Z[i] = 1, L[i] = 0)
+\]
+
+
+\[
+  \alpha_{y2u}^i
+  =
+  P(V,Z[i] = 1, L[i] = 0)
+\]
 
 \subsection{Resampling Censored Events: Metropolis-Within-Gibbs}
 
