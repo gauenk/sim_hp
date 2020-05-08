@@ -78,7 +78,7 @@ P(V,G)
 
 %Noteably, our algorithm requires us to have a rate $\lambda(t)$ which dominates the Hawkes process rate for any time $\lambda^*(t)$. %This censoring can be interpreted as a binary mask $C \in \{0,1\}^{|S|}$ applied to events in $s_i \in S$ with $c_i = 1$ indicating the event is observed, $s_i \in X$, and $c_i = 0$ indicating the event is censored, $s_i \in Y$.
 
-\begin{algorithm}[h]
+\begin{algorithm}[htbp]
   \DontPrintSemicolon
   \SetAlgoLined
   \KwIn{Hawkes process rate function $\lambda(t|\mathcal{H}_t)$, a dominating Poisson process rate $\eta(t)$, and the censoring parameter $\nu$}
@@ -115,7 +115,7 @@ Our Gibbs sampler targets the state $G,U,Y | X, \mTheta$. The Gibbs sampler alte
 
 
 
-\begin{algorithm}[h]
+\begin{algorithm}[htbp]
   \DontPrintSemicolon
   \SetAlgoLined
   \KwIn{Observed Hawkes events $X$, censored Hawkes events $Y$, thinned events $U$, and event types $G$.}
@@ -132,7 +132,7 @@ Our Gibbs sampler targets the state $G,U,Y | X, \mTheta$. The Gibbs sampler alte
 \subsection{Metropolis-within-Gibbs}
 
 
-\begin{algorithm}[h]
+\begin{algorithm}[htbp]
   \DontPrintSemicolon
   \SetAlgoLined
   \KwIn{All event times $V = X \cup Y \cup U$, event types $\widetilde{G}$}
@@ -150,7 +150,7 @@ Our Gibbs sampler targets the state $G,U,Y | X, \mTheta$. The Gibbs sampler alte
   }
   \algrule
   \caption{Metropolis Within Gibbs}
-  \label{alg:gibbs_hp}
+  \label{alg:gibbs_mwg}
 \end{algorithm}
 
 We write $G^{i}_{y2u} := (G\setminus g_i)\cup\{g_i = -1\}$ and $G^{i}_{u2y} := (G\setminus g_i)\cup\{g_i = 0\}$. Then we have
@@ -205,23 +205,33 @@ Each step of this recursion requires computation of $O(2^{k_i})$ compared to the
 
 \subsection{Sampling Ancestry}
 
-Once the MCMC chain has mixed and we have aggregated samples from the posterior, we can use the samples $N$ samples $\{S^i\}_{i-1}^N$ to estimate the embedded Poisson cluster process. We let $A$ be the functional, $A:[0,T]\times[0,T] \to [0,1]$, and say $A(X_i,X_j) $ is the probability $X_j$ is a descendants of $X_i$. To target the distribution $P(A | X)$, we use Gibbs sampling to (i) simulate ancestry from the full Hawkes Process $P(A | X, Y)$ and (ii) resample (via Algorithm~\ref{alg:gibbs_hp}) the missing Hawkes events $P(Y | X)$. Thus we can estimate the ancestry via Gibbs sampling, as outlined in Algorithm~\ref{alg:ancestry}
+Once the MCMC chain has mixed and we have aggregated samples from the posterior, we can use the samples $N$ samples $\{S^i\}_{i-1}^N$ to estimate the embedded Poisson cluster process. We let $A$ be the functional, $A:[0,T]\times[0,T] \to [0,1]$, and say $A(X_i,X_j) $ is the probability $X_j$ is a descendants of $X_i$. To target the distribution $P(A | X)$, we use Gibbs sampling to (i) simulate ancestry from the full Hawkes Process $P(A | X, Y)$ and (ii) resample (via Algorithm~\ref{alg:gibbs_hp}) the missing Hawkes events $P(Y | X)$. Thus we can estimate the ancestry via Gibbs sampling, as outlined in Algorithm~\ref{alg:gibbs_ancestry}
 
-\begin{algorithm}[h]
+\begin{algorithm}[htbp]
   \DontPrintSemicolon
   \SetAlgoLined
   \KwIn{Observed events $X$}
   \KwOut{Samples of $A$}
   \algrule
-  Sample $P(A | X, Y)$\;
+  Sample $P(A | X, Y)$ according to Algorithm~\ref{alg:sim_ancestry}\;
   Sample $P(Y | X)$ via Gibbs sampling (c.f. Algorithm~\ref{alg:gibbs_hp})\;
   \algrule
   \caption{Sampling Ancestry via Gibbs Sampling}
-  \label{alg:ancestry}
+  \label{alg:gibbs_ancestry}
 \end{algorithm}
 
 
-
+\begin{algorithm}[htbp]
+  \DontPrintSemicolon
+  \SetAlgoLined
+  \KwIn{Observed events $X$, Missing events $Y$, Hawkes Process parameters $\mTheta$}
+  \KwOut{Sample $P(A | X, Y, \mTheta)$}
+  \algrule
+  Sample $P(A | X, Y, \mTheta)$\;
+  \algrule
+  \caption{Simulate Ancestry of Hawkes Process}
+  \label{alg:sim_ancestry}
+\end{algorithm}
 
 % (ii) set ancenstry | X, Y? is it easy to sample? hawkes kernel with bounded support. truncated hawkes process (in practice) then its linear.
 
