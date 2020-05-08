@@ -23,7 +23,7 @@
 \[
   \lambda^*(t)
   =
-  \lambda(t|H)
+  \lambda(t|\mathcal{H}_t)
   =
   \mu(t)
   +
@@ -47,16 +47,17 @@ and equivalently we have with $S_k = \{v_k \in V |\; k < i, v_k \in S\}$
 
 
 
-\[
+\begin{equation}
 P(V,L,Z)
 =
 \text{PoissonProc}(V\;;\eta(t))\;
 \prod_{i=1}^{|L|} \text{Bern}\left(l_i\;;\frac{\lambda(v_i | S_k)}{\eta(v_k)}\right)
 \prod_{i=1}^{|Z|} \text{Bern}(z_i\;;\nu)
-\]
+\end{equation}
 
 \noindent or written explicitly with data
 
+% multi-line equations use "align"
 \[
 P(U,Y,X)
 =
@@ -76,7 +77,7 @@ Thus the metropolis-within-gibbs algorithm is as follows
 \begin{algorithm}[h]
   \DontPrintSemicolon
   \SetAlgoLined
-  \KwIn{Hawkes process rate function $\lambda(t|\mathcal{H})$, a dominating Poisson process rate $\eta(t)$, and the censoring parameter $\nu$}
+  \KwIn{Hawkes process rate function $\lambda(t|\mathcal{H}_t)$, a dominating Poisson process rate $\eta(t)$, and the censoring parameter $\nu$}
   \KwOut{$X$, observed events sample from a censored Hawkes Process}
   \algrule
   $S = \emptyset$, the Hawkes events\;
