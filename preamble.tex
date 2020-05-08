@@ -80,6 +80,7 @@
 \providecommand{\mZ}{\ensuremath{\mat{Z}}}
 \providecommand{\mLambda}{\ensuremath{\mat{\Lambda}}}
 \providecommand{\mSigma}{\ensuremath{\mat{\Sigma}}}
+\providecommand{\mTheta}{\ensuremath{\mat{\Theta}}}
 \providecommand{\mPbar}{\bar{\mP}}
 
 \providecommand{\ones}{\vec{e}}
@@ -118,6 +119,9 @@
 
 \sodef\allcapsspacing{\upshape}{0.15em}{0.65em}{0.6em}%
 
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+
 \makeatletter
 \def\maketitle{%
 \par
@@ -147,6 +151,7 @@ Exact Inference for Censored Hawkes Process Simulation
 \newenvironment{jcode}{\mdframed[backgroundcolor=blue!20,linecolor=black,leftmargin=20,rightmargin=20]\verbatim\underline{Julia Code}}{\endverbatim\endmdframed}
 \usepackage[ruled,vlined,linesnumbered,]{algorithm2e}
 %\usepackage{algorithmic}
+
 
 \makeatother
 
