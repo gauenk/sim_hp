@@ -23,7 +23,7 @@
 \begin{align}
   \lambda^*(t)
   =
-  \lambda(t|H)
+  \lambda(t|\mathcal{H}_t)
   =
   \mu(t)
   +
@@ -81,7 +81,7 @@ P(V,G)
 \begin{algorithm}[h]
   \DontPrintSemicolon
   \SetAlgoLined
-  \KwIn{Hawkes process rate function $\lambda(t|\mathcal{H})$, a dominating Poisson process rate $\eta(t)$, and the censoring parameter $\nu$}
+  \KwIn{Hawkes process rate function $\lambda(t|\mathcal{H}_t)$, a dominating Poisson process rate $\eta(t)$, and the censoring parameter $\nu$}
   \KwOut{$X$, observed events sample from a censored Hawkes Process}
   \algrule
   $S = \emptyset$, the Hawkes events\;
